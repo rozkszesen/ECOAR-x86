@@ -1,18 +1,69 @@
+;ch  - x
+;cl  - y
 ;edi - pointer to image
-;ch  - rfactor
-;cl  - padding
-;esi - normWidth
 ;ebx - columnCounter
 ;edx - rowCounter
 ;eax - temporary register for calculations
 
-;algorithm
-;pixel -= 128;
-;pixel *= rfactor;
-;pixel /= 128;
-;pixel += 128;
 section .text
+
 global _line_to
+global _set_pixel
+
+_set_pixel:
+{
+        push    ebp 
+        mov     ebp, esp     
+        push    ebx
+        push    edi
+        push    esi
+
+        mov     ecx, [ebp+8]            ;store x in ch
+        mov     edx, [ebp+12]           ;store y in cl 
+       ; mov     edi, [ebp+16]          ;store pointer to the file in edi
+
+        
+        mov edi, DWORD[ebp+16]          ;store the filebuf pointer as 32bit word
+        mov 
+ 
+	;unsigned char *pPix = pImg->pImg + pImg->filebuf[10] + (((pImg->width + 31) >> 5) << 2) * y + (x >> 3);
+	mov eax, DWORD[edi]             ;move the filebuf pointer to eax
+        add eax, 62
+	add eax, 31
+	shr eax, 5
+	shl eax, 2
+	imul eax, edx   ; *y
+	mov ecx, esi    ; x
+	shr esi, 3
+	add eax, esi
+	add eax, DWORD[edi] ; stores the address of the pixel to set - in filebuf
+ 
+
+	;unsigned char mask = 0x80 >> (x & 0x07);
+	mov ecx, edx
+	mov edi, 0x80
+	and ecx, 0x07
+	shr edi, cl		
+	mov ecx, edi
+
+	mov edi, DWORD[ebp+8]
+ 
+    ;Checking color value and painting proper pixel
+	cmp DWORD[Col], 1
+	je BlackPixel
+	or ecx, DWORD[eax]	;*pPix |= mask;
+	mov DWORD[eax], ecx
+	jmp Return
+ 
+BlackPixel:
+	not ecx			;*pPix &= ~mask;
+	and ecx, DWORD[eax]
+	mov DWORD[eax], ecx
+ 
+Return:
+	xor eax, eax		;return 0
+	ret
+        
 
 _line_to:
         push    ebp 
