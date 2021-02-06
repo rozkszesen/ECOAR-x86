@@ -7,113 +7,59 @@
 
 section .text
 
-global _line_to
+;global _line_to
 global _set_pixel
 
 _set_pixel:
-{
-        push    ebp 
+	push    ebp 
         mov     ebp, esp     
-        push    ebx
+        ;push    ebx
         push    edi
         push    esi
-
-        mov     ecx, [ebp+8]            ;store x in ch
-        mov     edx, [ebp+12]           ;store y in cl 
-       ; mov     edi, [ebp+16]          ;store pointer to the file in edi
-
         
-        mov edi, DWORD[ebp+16]          ;store the filebuf pointer as 32bit word
-        mov 
- 
-	;unsigned char *pPix = pImg->pImg + pImg->filebuf[10] + (((pImg->width + 31) >> 5) << 2) * y + (x >> 3);
-	mov eax, DWORD[edi]             ;move the filebuf pointer to eax
-        add eax, 62
-	add eax, 31
+        mov edx, [ebp+8] ; load x into edx
+        mov esi, [ebp+12] ; load y into esi
+        mov edi, DWORD[ebp+16] ; load the structure
+
+;unsigned char *pPix = imgInfo->filebuf + imgInfo->imgoffset + (((pImg->width + 31) >> 5) << 2) * y + (x >> 3);
+	mov eax, DWORD[edi] ; load WIDTH (first member of the structure)
+	add eax, DWORD[edi+8] ; add the image offset 
+        add eax, 31
 	shr eax, 5
 	shl eax, 2
-	imul eax, edx   ; *y
-	mov ecx, esi    ; x
-	shr esi, 3
-	add eax, esi
-	add eax, DWORD[edi] ; stores the address of the pixel to set - in filebuf
- 
+	imul eax, esi ; esi holds y apparently
+	mov ecx, edx ; edx holds x -> move it to ecx
+	shr ecx, 3 ; x >> 3
+	add eax, ecx ; add (width+31)*2/5 * y  and x/3
+	add eax, DWORD[edi+32] ; add the pointer imgInfo->filebuf to the above result, store in eax
 
 	;unsigned char mask = 0x80 >> (x & 0x07);
-	mov ecx, edx
-	mov edi, 0x80
-	and ecx, 0x07
-	shr edi, cl		
-	mov ecx, edi
+	mov ecx, edx  ; move x to ecx for operatons on x again
+	mov edi, 0x80 ; mask with one white pixel -> loaded to edi
+	and ecx, 0x07 ; xmod8 -> place for the pixel in the byte
+	shr edi, cl	  ; move the mask cl times to the proper place (result of previous instruction)
+	mov ecx, edi  ; move the modified mask to ecx 
 
-	mov edi, DWORD[ebp+8]
- 
+	mov edi, DWORD[ebp+16] ; move the structure to edi again
+
     ;Checking color value and painting proper pixel
-	cmp DWORD[Col], 1
+	cmp DWORD[edi+20], 1
 	je BlackPixel
 	or ecx, DWORD[eax]	;*pPix |= mask;
 	mov DWORD[eax], ecx
 	jmp Return
- 
+
 BlackPixel:
-	not ecx			;*pPix &= ~mask;
-	and ecx, DWORD[eax]
-	mov DWORD[eax], ecx
- 
+	not ecx			; mask => ~mask
+	and ecx, DWORD[eax] ; *pPix &= ~mask
+	mov DWORD[eax], ecx ; store result - couldn't be done in one instruction?
+
 Return:
-	xor eax, eax		;return 0
-	ret
-        
-
-_line_to:
-        push    ebp 
-        mov     ebp, esp     
-        push    ebx
-        push    edi
-        push    esi
-        
-        mov     edi, [ebp+8]                    ;store pointer to the file in edi
-        mov     ch, [ebp+12]                    ;store rfactor in ch
-
-        ;padding calculate
-        mov     ebx, [edi+18]                   ;load width to ebx
-        mov     cl, bl                          ;in ebx there is normWidth
-        and     cl, 3                           ;store padding in cl
-
-        ;normWidth calculate
-        lea     ebx, [ebx + ebx*2]              ;width*3 and store normWidth in ebx
-
-        ;set counters
-        mov     edx, [edi+22]                   ;set rowCounter (edx) to height
-
-        ;move image pointer to the beginning of the bitmap (by the offset size)
-        mov     eax, [edi+10]                   ;load offset to eax
-        add     edi, eax                        ;move pointer by the offset value
-
-row_processing:
-        mov     esi, ebx                        ;set columnCounter as normWidth
-
-pixel_processing:
-        mov     al, [edi]                       ;load current pixel to al
-        sub     eax, 128                        ;pixel -= 128
-        imul    ch                              ;pixel *= rfactor
-        sar     eax, 7                          ;pixel /= 128
-        add     eax, 128                        ;pixel += 128
-        mov     byte[edi], al                   ;update pixel in edi
-        inc     edi                             ;go to the next pixel
-        dec     esi                             ;columnCounter--    
-        jnz     pixel_processing
-
-        movzx   eax, cl
-        add     edi, eax
-        dec     edx                             ;rowCounter--
-        jnz     row_processing
-
-exit:  
-        pop     esi
+	;xor eax, eax		;return 0
+	pop     esi
         pop     edi
-        pop     ebx
+        ;pop     ebx
         mov     esp, ebp
         pop     ebp
-        ret  
-         
+
+	ret
