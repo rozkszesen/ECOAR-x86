@@ -8,13 +8,15 @@ typedef struct {
     int col;            // +20
     int linesbytes;     // + 24
     int filesize;       // +28
-    unsigned char* filebuf; // +32
+    unsigned char* filebuf; //+32
+    unsigned char* pImg; 
+     
 } imgInfo;
 
 extern void line_to(int x, int y, imgInfo *imginfo);
 extern void set_pixel(int x, int y, imgInfo *imginfo);
 extern void test_my(char *s);
-extern void set_pixel_kasia(imgInfo* imginfo, int x, int y);
+extern void set_pixel_k(imgInfo* imginfo, int x, int y);
 
 imgInfo* readInfo(FILE* inputFile);
 void saveImage(imgInfo* imginfo);
@@ -47,9 +49,9 @@ int main(int argc, char *argv[])
         printf("test 1\n");
         printf("imgoffset: %d\n", imginfo->imgoffset);
 
-        set_pixel(1, 1, imginfo);
-        //set_pixel_kasia(imginfo, 1, 1);
-
+        //set_pixel(0, 0, imginfo);
+        set_pixel_k(imginfo, 1, 1);
+        //setPixel(imginfo, 1, 1);
         saveImage(imginfo);
 
         free(imginfo);
@@ -64,7 +66,6 @@ imgInfo* readInfo(FILE *inputFile)
 {
     unsigned long imageSize = 0;
     imgInfo *imginfo = malloc(sizeof(imgInfo));
- 
 
     // opening and saving to the file buffer
 
@@ -75,13 +76,13 @@ imgInfo* readInfo(FILE *inputFile)
 
     imginfo->filebuf = malloc(imginfo->filesize);
 
-    fread(imginfo->filebuf, 1, imginfo->filesize, inputFile);
-
     if (imginfo->filebuf == NULL)
     {
         printf("Error during opening of the file\n");
         return 0;
     }
+
+    fread(imginfo->filebuf, 1, imginfo->filesize, inputFile);
 
     // initializing with default values
     imginfo->xc = 0;
@@ -93,6 +94,15 @@ imgInfo* readInfo(FILE *inputFile)
     imginfo->height = imginfo->filebuf[22];
     imginfo->imgoffset = imginfo->filebuf[10];
     imginfo->linesbytes = ((imginfo->width + 31) >> 5) << 2;
+
+
+   //imginfo->pImg = (unsigned char*) malloc(imginfo->filesize);
+
+    for (int i = 0; i < imginfo->height; ++i)
+	{
+		fread(imginfo->pImg, 1, imginfo->linesbytes, inputFile);
+		imginfo->pImg += imginfo->linesbytes;
+	}
 
     fclose(inputFile);
     return imginfo;
