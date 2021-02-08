@@ -1,9 +1,12 @@
-;ch  - x
-;cl  - y
-;edi - pointer to image
-;ebx - columnCounter
-;edx - rowCounter
-;eax - temporary register for calculations
+;typedef struct {
+;    int width, height; //+0 +4
+;    int imgoffset;     //+8
+;    int xc, yc;         //+12, +16
+;    int col;            // +20
+;    int linesbytes;     // + 24
+;    int filesize;       // +28
+;    unsigned char* filebuf; // +32
+;} imgInfo;
 
 section .text
 
@@ -12,19 +15,18 @@ global _set_pixel
 
 _set_pixel:
 	push    ebp 
-        mov     ebp, esp     
-        ;push    ebx
-        push    edi
-        push    esi
+    mov     ebp, esp     
+    push    edi
+    push    esi
         
-        mov edx, [ebp+8] ; load x into edx
-        mov esi, [ebp+12] ; load y into esi
-        mov edi, DWORD[ebp+16] ; load the structure
+    mov		edx, [ebp+8] ; load x into edx
+    mov 	esi, [ebp+12] ; load y into esi
+    mov 	edi, DWORD[ebp+16] ; load the structure
 
 ;unsigned char *pPix = imgInfo->filebuf + imgInfo->imgoffset + (((pImg->width + 31) >> 5) << 2) * y + (x >> 3);
 	mov eax, DWORD[edi] ; load WIDTH (first member of the structure)
 	add eax, DWORD[edi+8] ; add the image offset 
-        add eax, 31
+    add eax, 31
 	shr eax, 5
 	shl eax, 2
 	imul eax, esi ; esi holds y apparently
@@ -55,11 +57,10 @@ BlackPixel:
 	mov DWORD[eax], ecx ; store result - couldn't be done in one instruction?
 
 Return:
-	;xor eax, eax		;return 0
+
 	pop     esi
-        pop     edi
-        ;pop     ebx
-        mov     esp, ebp
-        pop     ebp
+    pop     edi
+    mov     esp, ebp
+    pop     ebp
 
 	ret
