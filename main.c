@@ -1,17 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern void line_to(unsigned char *inputFileArray, unsigned int rfactor);
-
 typedef struct {
-    unsigned char* filebuf;
-    unsigned char* pImg;
-    int width, height;
-    int xc, yc;
-    int col;
-    int linesbytes;
-    unsigned long filesize;
+    int width, height; //+0 +4
+    int imgoffset;     //+8
+    int xc, yc;         //+12, +16
+    int col;            // +20
+    int linesbytes;     // + 24
+    int filesize;       // +28
+    unsigned char* filebuf; // +32
 } imgInfo;
+
+extern void line_to(int x, int y, imgInfo *imginfo);
+extern void set_pixel(int x, int y, imgInfo *imginfo);
+extern void test_my(char *s);
+extern void set_pixel_kasia(imgInfo* imginfo, int x, int y);
 
 imgInfo* readInfo(FILE* inputFile);
 void saveImage(imgInfo* imginfo);
@@ -38,9 +41,15 @@ int main(int argc, char *argv[])
     {
         imgInfo *imginfo;
         imginfo = readInfo(inputFile);
-        
+        char text[] = "abc123";
+
         // my function
-        setPixel(imginfo, 1, 1);
+        printf("test 1\n");
+        printf("imgoffset: %d\n", imginfo->imgoffset);
+
+        set_pixel(1, 1, imginfo);
+        //set_pixel_kasia(imginfo, 1, 1);
+
         saveImage(imginfo);
 
         free(imginfo);
@@ -82,19 +91,8 @@ imgInfo* readInfo(FILE *inputFile)
     // reading info and updating the imginfo structure
     imginfo->width = imginfo->filebuf[18];
     imginfo->height = imginfo->filebuf[22];
-    
-    imageSize = (((imginfo->width + 31) >> 5) << 2) * imginfo->height;
-    imginfo->pImg = (unsigned char*) malloc(imageSize);
+    imginfo->imgoffset = imginfo->filebuf[10];
     imginfo->linesbytes = ((imginfo->width + 31) >> 5) << 2;
-
-    // reading the image
-    fseek(inputFile, imginfo->filebuf[10], SEEK_SET);
-    
-    for (int y=0; y < imginfo->height; ++y)
-	{
-		fread(imginfo->pImg, 1, abs(imginfo->linesbytes), inputFile);
-		imginfo->pImg += imginfo->linesbytes;
-	}
 
     fclose(inputFile);
     return imginfo;
@@ -116,7 +114,7 @@ void saveImage(imgInfo* imginfo)
 void setPixel(imgInfo* imginfo, int x, int y)
 {
 
-	unsigned char *pPix = imginfo->filebuf + imginfo->filebuf[10] + ((imginfo->linesbytes) * y + (x >> 3));
+	unsigned char *pPix = imginfo->filebuf + imginfo->imgoffset + ((imginfo->linesbytes) * y + (x >> 3));
 	unsigned char mask = 0x80 >> (x & 0x07);
 	if (imginfo->col)
 		*pPix |= mask;
