@@ -92,52 +92,47 @@ yi_positive:
 	mov edx, [esp+28]		; bi
 	sub edx, [esp+12]		; bi - dy = d
 	mov [esp+32], edx		; move d on stack
-
-loop_next_y:
+	
+while2:
 	mov ecx, [esp+4]		; yc
 	mov edx, [ebp+16]		; y
-	cmp ecx, edx			; if yc = y
-	je exit_line_to			; exit the loop
-
-	cmp dword [esp+32], 0	; check if d >= 0
-	jge if_greater
-	
-;otherwise: if_less		
-	mov edx, [esp+28]		; load bi
-	add [esp+32], edx		; d += bi
-
-	mov edx, [esp+20]		; load yi
-	add [esp+4], edx		; yc += xi
-
-	jmp use_set_pixel
-
-if_greater:
+	cmp ecx, edx			; if (yc==y)
+	je endwhile2			; then end while loop
+	cmp dword [esp+32], 0	; if (d >= 0)
+	jge while2if			; then enter if body
+	mov edx, [esp+28]		; bi
+	add [esp+32], edx		; d += bi;
+	mov edx, [esp+20]		; yi
+	add [esp+4], edx		; yc += xi;
+	jmp endwhile2if
+while2if:
 	mov edx, [esp+16]		; xi
 	add [esp], edx			; xc += xi;
 	mov edx, [esp+20]		; yi
 	add [esp+4], edx		; yc += yi;
 	mov edx, [esp+24]		; ai
 	add [esp+32], edx		; d += ai;
-
-use_set_pixel:			
+endwhile2if:			
 	mov edx, [esp+4]		; yc
 	mov ecx, [esp]			; xc
+	mov eax, [ebp+8]		; pImag
 	push edx				
 	push ecx
 	push eax
 	call _setPixel			; setPixel(pImg, xc, yc)
-	
 	add esp, 12
-	jmp loop_next_y
-
+	jmp while2
+endwhile2:
+	jmp endwhile1
 leading_axis_x:	
-	sub ecx, edx			; dy - dx
-	shl ecx, 1				; (dy - dx) * 2 = ai
-	mov [esp+24], ecx		; move ai on stack
-
+	sub ecx, edx			; dy-dx
+	mov eax, 2
+	mul ecx					; (dy - dx) * 2
+	mov [esp+24], eax		; ai = (dy - dx) * 2;
+	mov eax, 2
 	mov ecx, [esp+12]		; dy
-	shl ecx, 1				; dy * 2
-	mov [esp+28], ecx		; bi = dy * 2;
+	mul ecx					; dy * 2
+	mov [esp+28], eax		; bi = dy * 2;
 	mov edx, [esp+28]		; bi
 	sub edx, [esp+8]		; bi-dx
 	mov [esp+32], edx		; d = bi - dx;
@@ -145,7 +140,7 @@ while1:
 	mov ecx, [esp]			; xc
 	mov edx, [ebp+12]		; x
 	cmp ecx, edx			; if (xc==x)
-	je exit_line_to			; then end while loop
+	je endwhile1			; then end while loop
 	cmp dword [esp+32], 0	; if (d >= 0)
 	jge while1if			; then enter if body
 	mov edx, [esp+28]		; bi
@@ -163,15 +158,15 @@ while1if:
 endwhile1if1:			
 	mov edx, [esp+4]		; yc
 	mov ecx, [esp]			; xc
-	mov eax, [ebp+8]		; imgInfo
+	mov eax, [ebp+8]		; pImag
 	push edx				
 	push ecx
 	push eax
 	call _setPixel			; setPixel(pImg, xc, yc)
 	add esp, 12
 	jmp while1
-exit_line_to:	
-	mov eax, [ebp+8]		; imgInfo
+endwhile1:	
+	mov eax, [ebp+8]		; pImag
 	mov edx, [ebp+12]		; x
 	mov [eax+12], edx		; pImg->xc = x;
 	mov edx, [ebp+16]		; y
